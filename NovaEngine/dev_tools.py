@@ -5,6 +5,7 @@ import zipfile
 import subprocess
 
 def log(msg: str, sender="NovaEngine", error=False):
+    import traceback
     """
     Log a message to console.
 
@@ -18,6 +19,8 @@ def log(msg: str, sender="NovaEngine", error=False):
         print(f"{prefix} Error: {msg}")
     else:
         print(f"{prefix} {msg}")
+    
+    traceback.print_exc()
 
 def get_globals() -> dict:
     """

@@ -32,19 +32,26 @@ class Utils:
         text: str,
         x: float,
         y: float,
-        font: str = "TimesNewRoman",
+        font: Union[str, "pygame.font.Font"] = "TimesNewRoman",
         size: int = 14,
         color: Union[Colors, Tuple[int, int, int]] = Colors.BLACK,
         center: bool = False,
     ):
-        """Render text on screen with caching."""
+        """Render text on screen with caching.
+        font can be str (name) or pygame.font.Font object.
+        """
         if isinstance(color, Colors):
             color = color.value
 
-        cache_key = (text, font, size, color)
-        text_surf = NovaEngine.Engine._text_cache.get(cache_key)
-        if text_surf is None:
+        if isinstance(font, str):
             font_obj = pygame.font.SysFont(font, size)
+        else:
+            font_obj = font
+            size = font.get_linesize()
+        cache_key = (text, font_obj, size, color)
+        text_surf = NovaEngine.Engine._text_cache.get(cache_key)
+
+        if text_surf is None:
             text_surf = font_obj.render(text, True, color)
             NovaEngine.Engine._text_cache[cache_key] = text_surf
 

@@ -64,8 +64,8 @@ class Scene:
                 if getattr(obj, "solid", False):
                     self.solids.append(obj)
         
-        self.objects.sort(key=lambda o: getattr(o, "count", 0))
-        self.solids.sort(key=lambda o: getattr(o, "count", 0))
+        self.objects.sort(key=lambda o: getattr(o, "layer", 0))
+        self.solids.sort(key=lambda o: getattr(o, "layer", 0))
 
     # ========================
     # SCENE LOOP
@@ -84,12 +84,8 @@ class Scene:
         for obj in self.objects:
             try:
                 obj.update()
-                if isinstance(obj, Sprite):
-                    if not obj.alive:
-                        self.objects.remove(obj)
-                        self.solids.remove(obj)
                     
             except Exception as e:
                 from .core import log
 
-                log(e, "SceneManager", True)
+                log(e, "SceneManager | Update", True)

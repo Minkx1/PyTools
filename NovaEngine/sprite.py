@@ -49,6 +49,7 @@ class Sprite:
         self.solid = solid
         self.alive = True
 
+        self.clean_update = False
         self.update_func = None
 
         self.debug_color = (
@@ -59,7 +60,7 @@ class Sprite:
         self.debug = self.engine.debug
 
         Sprite._counter += 1
-        self.count = Sprite._counter
+        self.layer = Sprite._counter
 
         # Load original image (keep for transformations)
         if img_path:
@@ -94,6 +95,14 @@ class Sprite:
         from .time import Time
         self.collide_immun_time = duration
         self.collide_immun = Time.Cooldown(self.collide_immun_time)
+    
+    def set_layer(self, layer):
+        self.layer = layer
+        return self
+
+    def change_layer(self, value:int = None):
+        self.layer += value or 1
+        return self
 
     def draw(self):
         """
@@ -139,7 +148,7 @@ class Sprite:
 
         return val
 
-    def set_update(self):
+    def set_update(self, clean=False):
         """
         Decorator to set custom update logic for the sprite.
 
@@ -148,6 +157,7 @@ class Sprite:
         """
 
         def decorator(func):
+            self.clean_update = clean
             self.update_func = func
             return func
 
@@ -347,6 +357,7 @@ class Sprite:
         Returns:
             Sprite: Returns self for chaining.
         """
+
         self.alive = False
         return self
 
@@ -354,10 +365,13 @@ class Sprite:
         """
         Call custom update function or draw by default.
         """
-        if self.alive:
-            self.draw()
-            if self.update_func:
-                self.update_func()
+        if not self.clean_update:
+            if self.alive:
+                self.draw()
+                if self.update_func:
+                    self.update_func()
+        else:
+            self.update_func()
 
     # ====== ANIMATIONS ======
     def set_animation(self, name: str, frames: list, speed: float = 0.1, loop: bool = True):
@@ -462,7 +476,7 @@ class Group:
         """
         self.sprites: list[Sprite] = list(sprites)
         Sprite._counter += 1
-        self.count = Sprite._counter
+        self.layer = Sprite._counter
 
     def add(self, *sprites: Sprite):
         """
@@ -514,11 +528,10 @@ class Group:
         Returns:
             Group: Returns self for chaining.
         """
+        self.sprites.sort(key=lambda o: getattr(o, "layer", 0))
         for sprite in self.sprites:
             sprite.draw()
             sprite.update()
-            if not sprite.alive:
-                self.remove(sprite)
         return self
 
     def move(self, dx: float = 0, dy: float = 0):

@@ -1,4 +1,4 @@
-"""===== engine.py ====="""
+"""===== core.py ====="""
 
 import pygame
 import threading
@@ -7,7 +7,7 @@ from .dev_tools import log, get_globals
 # ========================
 # ENGINE CONSTANTS
 # ========================
-ENGINE_VERSION = "V1.9.1"
+ENGINE_VERSION = "V1.9.2"
 APP_NAME_ENGINE_TEMPLATE = f" | Running with NovaEngine {ENGINE_VERSION}"
 
 ALLOW_NO_TEMPLATE = False
@@ -70,8 +70,10 @@ class NovaEngine:
         self.scenes = []
         self.active_scene = None
         self.main_run_func = None
+        self.start_func = None
+        self.end_func = None
 
-        @self.main()
+        @self.set_main()
         def _():
             from .utils import Colors, Utils
 
@@ -105,7 +107,7 @@ class NovaEngine:
             def run_cmd_input():
                 while True:
                     cmd = input(">>> ")
-                    if cmd == "kill()":
+                    if cmd == "kill()" or cmd == "quit()":
                         self.quit()
                         break
                     elif cmd == "restart()":
@@ -138,6 +140,9 @@ class NovaEngine:
             save_manager.load()
 
         # Game loop
+
+        if self.start_func:
+            self.start_func()
 
         self.running = True
         while self.running:
@@ -172,6 +177,9 @@ class NovaEngine:
             pygame.display.flip()
             self.dt = self.clock.tick(self.fps) / 1000
 
+        if self.end_func:
+            self.end_func()
+
         # Saving data to save
 
         if save_manager is not None:
@@ -182,11 +190,27 @@ class NovaEngine:
         self.running = False
         log("Quitting the game...")
 
-    def main(self):
+    def set_main(self):
         """Decorator to register main game logic."""
 
         def decorator(func):
             self.main_run_func = func
+            return func
+
+        return decorator
+    def set_start(self):
+        """Decorator to register start game logic."""
+
+        def decorator(func):
+            self.start_func = func
+            return func
+
+        return decorator
+    def set_end(self):
+        """Decorator to register end game logic."""
+
+        def decorator(func):
+            self.end_func = func
             return func
 
         return decorator

@@ -24,6 +24,12 @@ class SoundManager:
             from .dev_tools import log
 
             log(f"Sound '{name}' not found", "SoundManager", True)
+    
+    @staticmethod
+    def play_path_sound(path, volume=1.0, count=1):
+        snd = pygame.mixer.Sound(path)
+        snd.set_volume(volume)
+        snd.play(count-1)
 
     @staticmethod
     def play_music(path, volume=1.0, loop=-1):
