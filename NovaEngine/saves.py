@@ -63,7 +63,7 @@ class SaveManager:
         Returns:
             dict: The global scope of the caller.
         """
-        from .dev_tools import get_globals
+        from .utils import get_globals
         return get_globals()
 
     def set_vars(self, vars: list[str]):

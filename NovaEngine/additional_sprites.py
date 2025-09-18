@@ -127,7 +127,7 @@ class Rect(Sprite):
 
         self.color = color
         self.border = border
-        self.rect = rect
+        self.rect = pygame.Rect(rect[0], rect[1], rect[2], rect[3])
     
     def update(self):
         pygame.draw.rect(self.engine.screen, self.color, self.rect, self.border)
@@ -146,3 +146,4 @@ class Popup(TextLabel):
         if self.alive: super().draw()
         if self.cd.check(): 
             self.kill()
+

@@ -49,7 +49,7 @@ class Sprite:
         self.solid = solid
         self.alive = True
 
-        self.clean_update = False
+        self.force_update = False
         self.update_func = None
 
         self.debug_color = (
@@ -86,6 +86,7 @@ class Sprite:
         self.angle: float = 0
         self.rect = self.img.get_rect()
         self.x, self.y = self.rect.topleft
+        self.scaling_size = (self.width, self.height)
 
         # Animations
         self.animations: dict[str, dict] = {}
@@ -112,8 +113,11 @@ class Sprite:
             Sprite: Returns self for chaining.
         """
         if self.alive:
-            rot_data = self._rotate_img()
-            self.surface.blit(rot_data.get("img", self.img), rot_data.get("rect", self.rect).topleft)
+            trans = pygame.transform.scale(self.original_img, self.scaling_size)
+            self.img = pygame.transform.rotate(trans, self.angle)
+            self.rect = self.img.get_rect(center=self.rect.center)
+
+            self.surface.blit(self.img, self.rect.topleft)
 
         if self.debug:
             from .utils import Utils
@@ -127,12 +131,6 @@ class Sprite:
             )
         return self
 
-    def _rotate_img(self):
-        rotated_img = pygame.transform.rotate(self.img, self.angle)
-        rotated_rect = rotated_img.get_rect(center=self.rect.center)
-
-        return {"img": rotated_img, "rect": rotated_rect}
-
     def hover(self, special_point: tuple[float, float] = None):
         """
         If sprite's rect is hovered by mouse, returns True.
@@ -143,12 +141,12 @@ class Sprite:
             try: 
                 val = self.rect.collidepoint(special_point)
             except Exception as e:
-                from .dev_tools import log
-                log(e, "SpriteHover", True)
+                from .utils import log
+                log(e, "Sprite | Hover", True)
 
         return val
 
-    def set_update(self, clean=False):
+    def set_update(self, force=False):
         """
         Decorator to set custom update logic for the sprite.
 
@@ -157,7 +155,7 @@ class Sprite:
         """
 
         def decorator(func):
-            self.clean_update = clean
+            self.force_update = force
             self.update_func = func
             return func
 
@@ -166,13 +164,6 @@ class Sprite:
     def set_position(self, x: float | None = None, y: float | None = None):
         """
         Set top-left position of the sprite.
-
-        Args:
-            x (float | None): X coordinate.
-            y (float | None): Y coordinate.
-
-        Returns:
-            Sprite: Returns self for chaining.
         """
         if x is not None:
             self.x = x
@@ -183,14 +174,7 @@ class Sprite:
 
     def place_centered(self, x: float, y: float):
         """
-        Center the sprite at the given coordinates.
-
-        Args:
-            x (float): Center X coordinate.
-            y (float): Center Y coordinate.
-
-        Returns:
-            Sprite: Returns self for chaining.
+        Set sprite's cetner coordinates. 
         """
         self.rect.center = (x, y)
         self.x, self.y = self.rect.topleft
@@ -199,13 +183,6 @@ class Sprite:
     def move(self, dx: float = 0, dy: float = 0):
         """
         Move sprite by (dx, dy).
-
-        Args:
-            dx (float): Change in X position.
-            dy (float): Change in Y position.
-
-        Returns:
-            Sprite: Returns self for chaining.
         """
         self.rect.move_ip(dx, dy)
         self.x, self.y = self.rect.topleft
@@ -214,10 +191,6 @@ class Sprite:
     def move_to(self, target, speed: float):
         """
         Move sprite towards a target with given speed.
-
-        Args:
-            target (Sprite | tuple): Target point or another sprite.
-            speed (float): Movement speed in pixels per frame (scaled by dt).
         """
         if isinstance(target, Sprite):
             tx, ty = target.rect.center
@@ -235,10 +208,7 @@ class Sprite:
 
     def move_angle(self, speed: float):
         """
-        Move in the direction of the current angle.
-
-        Args:
-            speed (float): Movement speed.
+        Moves Sprite with its angle(basic angle is 0 deg)
         """
         ang = self.angle + 90
         dx = math.sin(math.radians(ang)) * speed
@@ -248,42 +218,22 @@ class Sprite:
 
     def scale(self, width: int, height: int):
         """
-        Scale sprite to (width, height), keeping it centered.
-
-        Args:
-            width (int): New width.
-            height (int): New height.
-
-        Returns:
-            Sprite: Returns self for chaining.
+        Scale sprite to (width, height).
         """
-        self.img = pygame.transform.scale(self.img, (width, height))
-        self.rect = self.img.get_rect(center=self.rect.center)
-        self.x, self.y = self.rect.topleft
+        self.scaling_size = (width, height)
         return self
 
     def stay_in_rect(self, rect: pygame.Rect):
         """
         Clamp sprite inside the given rect.
-
-        Args:
-            rect (pygame.Rect): Rectangle boundary.
-
-        Returns:
-            Sprite: Returns self for chaining.
         """
         self.rect.clamp_ip(rect)
         return self
 
     def rotate(self, angle: float):
         """
-        Rotate sprite around its center.
-
-        Args:
-            angle (float): Degrees to rotate.
-
-        Returns:
-            Sprite: Returns self for chaining.
+        Makes Sprite.angle equal to angle argument.
+        In basic Sprite.draw() original sprite's img is rotated by the sprite.angle.
         """
         self.angle = (self.angle - angle) % 360
         return self
@@ -291,9 +241,6 @@ class Sprite:
     def look_at(self, target):
         """
         Rotate sprite to face target.
-
-        Args:
-            target (Sprite | tuple): Target point or another sprite.
         """
         if isinstance(target, Sprite):
             tx, ty = target.rect.center
@@ -306,13 +253,6 @@ class Sprite:
     def collide(self, other: "Sprite" = None, rect: pygame.Rect = None) -> bool:
         """
         Check collision with another sprite or rect.
-
-        Args:
-            other (Sprite | None): Another sprite.
-            rect (pygame.Rect | None): A rectangle.
-
-        Returns:
-            bool: True if collision detected, else False.
         """
         if self.collide_immun.check():
             self.collide_immun.start()
@@ -342,9 +282,6 @@ class Sprite:
     def rect_update(self):
         """
         Update the rect based on the current image size.
-
-        Returns:
-            pygame.Rect: Updated rect.
         """
         self.rect = self.img.get_rect(topleft=self.rect.topleft)
         self.x, self.y = self.rect.topleft
@@ -365,7 +302,8 @@ class Sprite:
         """
         Call custom update function or draw by default.
         """
-        if not self.clean_update:
+        
+        if not self.force_update:
             if self.alive:
                 self.draw()
                 if self.update_func:
@@ -397,7 +335,7 @@ class Sprite:
 
         if not self.current_animation:
             self.current_animation = name
-            self.img = frames[0]
+            self.original_img = frames[0]
             self.rect_update()
         return self
 
@@ -415,7 +353,7 @@ class Sprite:
             self.current_animation = name
             self.animations[name]["index"] = 0
             self.animations[name]["timer"] = 0
-            self.img = self.animations[name]["frames"][0]
+            self.original_img = self.animations[name]["frames"][0]
             self.rect_update()
             return
 
@@ -439,15 +377,7 @@ class Sprite:
     @staticmethod
     def create_image(path: str = "", width: int | None = None, height: int | None = None):
         """
-        Load image and optionally scale it.
-
-        Args:
-            path (str): Path to image file.
-            width (int | None): Width to scale.
-            height (int | None): Height to scale.
-
-        Returns:
-            pygame.Surface: Loaded and scaled image.
+        Returns pygame.Surface object, rendered from path
         """
         img = pygame.image.load(path).convert_alpha()
         if width and height:
@@ -486,7 +416,7 @@ class Group:
             *sprites (Sprite): Sprites to add.
 
         Returns:
-            Group: Returns self for chaining.
+            Group
         """
         for sprite in sprites:
             if sprite not in self.sprites:
@@ -501,7 +431,7 @@ class Group:
             *sprites (Sprite): Sprites to remove.
 
         Returns:
-            Group: Returns self for chaining.
+            Group
         """
         for sprite in sprites:
             if sprite in self.sprites:
@@ -513,7 +443,7 @@ class Group:
         Draw all sprites in the group.
 
         Returns:
-            Group: Returns self for chaining.
+            Group
         """
         for sprite in self.sprites:
             sprite.draw()
@@ -523,10 +453,8 @@ class Group:
         """
         Update all sprites in the group.
 
-        Removes dead sprites automatically.
-
         Returns:
-            Group: Returns self for chaining.
+            Group
         """
         self.sprites.sort(key=lambda o: getattr(o, "layer", 0))
         for sprite in self.sprites:
@@ -534,7 +462,7 @@ class Group:
             sprite.update()
         return self
 
-    def move(self, dx: float = 0, dy: float = 0):
+    def move(self, dx: float = None, dy: float = None):
         """
         Move all sprites in the group.
 
@@ -543,7 +471,7 @@ class Group:
             dy (float): Change in Y.
 
         Returns:
-            Group: Returns self for chaining.
+            Group
         """
         for sprite in self.sprites:
             sprite.move(dx, dy)

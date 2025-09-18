@@ -73,13 +73,6 @@ class NovaEngine:
         self.start_func = None
         self.end_func = None
 
-        @self.set_main()
-        def _():
-            from .utils import Colors, Utils
-
-            Utils.fill_background(Colors.WHITE)
-            if self.active_scene: self.active_scene.run()
-
         self.globals = None
 
         # Threads
@@ -95,87 +88,84 @@ class NovaEngine:
 
     def run(self, first_scene=None, save_manager=None):
         """Run the main game loop and optional command input thread."""
-        self.globals = get_globals()
-
+        
         # Start command input thread
+        def setup():
+            self.globals = get_globals()
+            if self.terminal_allow:
+                import sys
+                import subprocess
 
-        if self.terminal_allow:
-            import sys
-            import subprocess
+                @self.new_thread()
+                def run_cmd_input():
+                    while True:
+                        cmd = input(">>> ")
+                        if cmd == "kill()" or cmd == "quit()":
+                            self.quit()
+                            break
+                        elif cmd == "restart()":
+                            subprocess.Popen(
+                                [sys.executable] + sys.argv,
+                                creationflags=subprocess.CREATE_NEW_CONSOLE,  # new console
+                            )
+                            self.quit()
+                            break
+                        else:
+                            try:
+                                exec(cmd, getattr(self, "globals", {}))
+                            except Exception as e:
+                                log(e, error=True)
 
-            @self.new_thread()
-            def run_cmd_input():
-                while True:
-                    cmd = input(">>> ")
-                    if cmd == "kill()" or cmd == "quit()":
-                        self.quit()
-                        break
-                    elif cmd == "restart()":
-                        subprocess.Popen(
-                            [sys.executable] + sys.argv,
-                            creationflags=subprocess.CREATE_NEW_CONSOLE,  # new console
-                        )
-                        self.quit()
-                        break
-                    else:
-                        try:
-                            exec(cmd, getattr(self, "globals", {}))
-                        except Exception as e:
-                            log(e, error=True)
+            # Working with first scene
 
-        # Working with first scene
+            if first_scene is not None:
+                try:
+                    self.active_scene = first_scene
+                except Exception as e:
+                    log(f"{e}", sender="SceneManager", error=True)
 
-        if first_scene is not None:
-            try:
-                self.active_scene = first_scene
-            except Exception as e:
-                log(f"{e}", sender="SceneManager", error=True)
+            if not self.active_scene and self.scenes:
+                self.active_scene = self.scenes[0]
 
-        if not self.active_scene and self.scenes:
-            self.active_scene = self.scenes[0]
+        setup()
 
         # Loading data from save
-
         if save_manager is not None:
             save_manager.load()
 
         # Game loop
-
         if self.start_func:
             self.start_func()
 
-        self.running = True
-        while self.running:
-            # base functional
-            self.keys_pressed = pygame.key.get_pressed()
-            self.mouse_clicked = self.MouseClicked(first_iter=True)
-            self.time = pygame.time.get_ticks()
-            if not self.time_froze:
-                self.in_game_time = self.time - self.time_spent_frozed
+        if self.main_run_func:
+            self.main_run_func()
+        else:
+            self.running = True
+            while self.running:
+                # some tech functional
+                self.keys_pressed = pygame.key.get_pressed()
+                self.mouse_clicked = self.MouseClicked(first_iter=True)
+                self.time = pygame.time.get_ticks()
+                if not self.time_froze:
+                    self.in_game_time = self.time - self.time_spent_frozed
 
-            if self.main_run_func:
-                self.main_run_func()
+                # main
+                self.screen.fill((255, 255, 255))
+                if self.active_scene: 
+                    self.active_scene._loop_function()
 
-            if self.debug:
-                from .utils import Utils
-                Utils.render_text(
-                    f"{round(self.clock.get_fps(), 2)}", 20, 20, center=True
-                )
-                Utils.render_text(
-                    str(pygame.mouse.get_pos()),
-                    *pygame.mouse.get_pos(),
-                    size=10,
-                    center=True,
-                )
+                # event handling
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.quit()                
+                    for handler in self.event_handlers:
+                        try:
+                            handler.handle_event(event)
+                        except Exception as e:
+                            log(e, "NovaEngine | Event Handler", True)
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.quit()                
-                for handler in self.event_handlers:
-                    handler.handle_event(event)
-
-            pygame.display.flip()
-            self.dt = self.clock.tick(self.fps) / 1000
+                pygame.display.flip()
+                self.dt = self.clock.tick(self.fps) / 1000
 
         if self.end_func:
             self.end_func()
@@ -285,8 +275,10 @@ class NovaEngine:
             try:
                 self.active_scene.run()
             except Exception as e:
-                from .dev_tools import log
                 log(msg=e, sender="SceneManager", error=True)
     
     def get_scene(self):
         return self.active_scene
+    
+    def get_screne(self):
+        return self.screen

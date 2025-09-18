@@ -21,7 +21,7 @@ class SoundManager:
             snd.set_volume(volume)
             snd.play(count-1)
         else:
-            from .dev_tools import log
+            from .utils import log
 
             log(f"Sound '{name}' not found", "SoundManager", True)
     

@@ -17,13 +17,17 @@ class Scene:
         Initialize a new scene.
         """
         
-        self.engine = NovaEngine.Engine
-        self.objects = []  # all sprites in scene
-        self.solids = []  # only solid sprites
-        self.run = self.update  # main update function
+        self._engine = NovaEngine.Engine
+        self._objects = []  # all sprites in scene
+        self._solids = []  # only solid sprites
+        self._loop_function = self.update  # main update function
 
         # Register scene in engine
-        self.engine.scenes.append(self)
+        self._engine.scenes.append(self)
+    
+    def get_objects(self, solids=False):
+        if solids: return self._solids
+        return self._objects
 
     # ========================
     # OBJECT MANAGEMENT
@@ -32,12 +36,12 @@ class Scene:
         """Add sprites to the scene manually."""
         sprites_list = list(sprites)
         for obj in sprites_list:
-            self.objects.append(obj)
+            self._objects.append(obj)
             if getattr(obj, "solid", False):
-                self.solids.append(obj)
+                self._solids.append(obj)
 
     @contextmanager
-    def sprites(self):
+    def init(self):
         """
         Context manager to auto-register newly created sprites.
         Usage:
@@ -59,33 +63,32 @@ class Scene:
 
         for name in new_vars:
             obj = after_vars[name]
-            if isinstance(obj, (Sprite, Group)):
-                self.objects.append(obj)
+            if isinstance(obj, (Sprite, Group)) or (hasattr(obj, 'update') and callable(getattr(obj, 'update', None))):
+                self._objects.append(obj)
                 if getattr(obj, "solid", False):
-                    self.solids.append(obj)
+                    self._solids.append(obj)
         
-        self.objects.sort(key=lambda o: getattr(o, "layer", 0))
-        self.solids.sort(key=lambda o: getattr(o, "layer", 0))
+        self._objects.sort(key=lambda o: getattr(o, "layer", 0))
+        self._solids.sort(key=lambda o: getattr(o, "layer", 0))
 
     # ========================
     # SCENE LOOP
     # ========================
-    def function(self):
-        """Decorator to register the main update function for the scene."""
+    def loop(self):
+        """ Funtion, send in decorator, will be called in main game loop """
 
         def decorator(func):
-            self.run = func
+            self._loop_function = func
             return func
 
         return decorator
 
     def update(self):
         """Call update() on all scene objects."""
-        for obj in self.objects:
+        for obj in self._objects:
             try:
                 obj.update()
                     
             except Exception as e:
-                from .core import log
-
+                from .utils import log
                 log(e, "SceneManager | Update", True)
