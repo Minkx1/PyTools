@@ -1,6 +1,6 @@
 import pygame
 import random
-from _nova_setup import novaengine as nova
+from tests.__nova_setup__ import novaengine as nova
 
 SCREEN_W, SCREEN_H = 640, 480
 

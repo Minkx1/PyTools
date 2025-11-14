@@ -2,7 +2,7 @@
 
 import pygame
 from typing import Tuple, Union
-from .core import NovaEngine
+from .engine import NovaEngine
 from .dev_tools import log
 
 class Colors:

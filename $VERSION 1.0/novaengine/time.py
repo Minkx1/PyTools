@@ -1,18 +1,18 @@
 """===== time.py ====="""
 
 import threading
-from .core import NovaEngine
+from .engine import NovaEngine
 
 class Time:
     @staticmethod
     def time_freeze():
-        NovaEngine.Engine.time_froze = True
-        NovaEngine.Engine.previous_time = NovaEngine.Engine.in_game_time
+        NovaEngine.Engine.time_froze = True  # type: ignore
+        NovaEngine.Engine.previous_time = NovaEngine.Engine.in_game_time # type: ignore
     
     @staticmethod
     def time_unfreeze():
-        NovaEngine.Engine.time_froze = False
-        NovaEngine.Engine.time_spent_frozed = (NovaEngine.Engine.time - NovaEngine.Engine.previous_time)
+        NovaEngine.Engine.time_froze = False # type: ignore
+        NovaEngine.Engine.time_spent_frozed = (NovaEngine.Engine.time - NovaEngine.Engine.previous_time) # type: ignore
 
     @staticmethod
     def Timer(duration):
@@ -56,16 +56,16 @@ class Time:
             self.state = True
             self.start_time = 0
 
-            self.engine.cooldowns.append(self)
+            self.engine.cooldowns.append(self) # type: ignore
 
         def check(self):
             # Checks if coolodown is ready
-            self.now = self.engine.time
+            self.now = self.engine.time # type: ignore
             self.state = self.now - self.start_time >= self.duration
             return self.state
         
         def start(self):
             # Called one time and starts cooldown
-            self.start_time = self.engine.time
+            self.start_time = self.engine.time # type: ignore
             self.state = False
             return self

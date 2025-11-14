@@ -1,6 +1,7 @@
 """===== DevTools ====="""
 
 import os
+import sys
 import zipfile
 import subprocess
 
@@ -20,7 +21,9 @@ def log(msg: str, sender="NovaEngine", error=False):
     else:
         print(f"{prefix} {msg}")
     
-    traceback.print_exc()
+    exc_type, exc_value, exc_tb = sys.exc_info()
+    if exc_type is not None:
+        traceback.print_exc()
 
 def get_globals() -> dict:
     """
@@ -50,7 +53,7 @@ class DevTools:
         icon_path="",
         onefile=True,
         noconsole=False,
-        dist_path: str = None,
+        dist_path: str = "dist",
     ):
         """
         Build a Windows executable from a Python script using PyInstaller.
@@ -119,10 +122,10 @@ class DevTools:
         DevTools.build_exe(
             main_file=main_file,
             name=name,
-            icon_path=icon_path,
+            icon_path=icon_path, # type: ignore
             onefile=onefile,
             noconsole=noconsole,
-            dist_path=dist_path,
+            dist_path=str(dist_path),
         )
 
         exe_path = os.path.join(dist_path or "dist", f"{name}.exe")

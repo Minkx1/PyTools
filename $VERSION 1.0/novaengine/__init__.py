@@ -4,7 +4,7 @@ NovaEngine is the small framework for simplifying creating games with PyGame lib
 """
 
 import pygame
-from .core import NovaEngine
+from .engine import NovaEngine
 from .time import Time
 from .utils import Colors, Utils
 from .dev_tools import DevTools, log, get_globals

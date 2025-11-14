@@ -1,4 +1,4 @@
-from _nova_setup import novaengine as nova 
+from tests.__nova_setup__ import novaengine as nova 
 import pygame, random
 
 SCREEN_W, SCREEN_H = 900, 600
@@ -10,7 +10,7 @@ asset_dir = "C:/Users/user/Desktop/Personal/Programming/PythonProjects/NovaEngin
 Main = nova.Scene() # Creating Main scene, that contains Sprites in itself and Main's loop function will be called in game-cycle
 
 # Initializing sprites in Main and Menu scenes
-with Main.init():
+with Main.set_objects():
     test = nova.Sprite(f"{asset_dir}/player.png", 100, 100).place_centered(450, 300)
     cool = nova.Time.Cooldown(0.1)
     @test.set_update()

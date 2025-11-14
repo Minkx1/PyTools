@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from .sprite import Sprite, Group
-from .core import NovaEngine
+from .engine import NovaEngine
 
 class Scene:
     """
@@ -17,78 +17,84 @@ class Scene:
         Initialize a new scene.
         """
         
-        self._engine = NovaEngine.Engine
-        self._objects = []  # all sprites in scene
-        self._solids = []  # only solid sprites
-        self._loop_function = self.update  # main update function
+        self.engine = NovaEngine.Engine
+        self.objects = []  # all sprites in scene
+        self.solids = []  # only solid sprites
+        self.loop_function = self.update  # main update function
 
         # Register scene in engine
-        self._engine.scenes.append(self)
+        if self.engine: self.engine.scenes.append(self)
     
     def get_objects(self, solids=False):
-        if solids: return self._solids
-        return self._objects
+        if solids: return self.solids
+        return self.objects
 
     # ========================
     # OBJECT MANAGEMENT
     # ========================
-    def add_sprite(self, *sprites):
+    def add_object(self, *sprites):
         """Add sprites to the scene manually."""
         sprites_list = list(sprites)
         for obj in sprites_list:
-            self._objects.append(obj)
+            self.objects.append(obj)
             if getattr(obj, "solid", False):
-                self._solids.append(obj)
+                self.solids.append(obj)
+
+    def remove_object(self, obj):
+        """Remove a sprite from the scene."""
+        templ = self.objects.copy()
+        if obj in templ:
+            templ.remove(obj)
+            self.objects = templ # to avoid modifying list during iteration
 
     @contextmanager
-    def init(self):
+    def set_objects(self):
         """
         Context manager to auto-register newly created sprites.
         Usage:
-            with scene.sprites():
+            with scene.set_objects():
                 sprite1 = Sprite(...)
 
                 @sprite1.set_update()
-                def _(): ...
+                def update_of_sprite1(): ...
         """
         import inspect
 
-        frame = inspect.currentframe().f_back.f_back
-        before_vars = set(frame.f_locals.keys())
+        frame = inspect.currentframe().f_back.f_back # type: ignore
+        before_vars = set(frame.f_locals.keys()) # type: ignore
 
         yield  # user creates sprites inside this block
 
-        after_vars = frame.f_locals
+        after_vars = frame.f_locals # type: ignore
         new_vars = set(after_vars.keys()) - before_vars
 
         for name in new_vars:
             obj = after_vars[name]
             if isinstance(obj, (Sprite, Group)) or (hasattr(obj, 'update') and callable(getattr(obj, 'update', None))):
-                self._objects.append(obj)
+                self.objects.append(obj)
                 if getattr(obj, "solid", False):
-                    self._solids.append(obj)
+                    self.solids.append(obj)
         
-        self._objects.sort(key=lambda o: getattr(o, "layer", 0))
-        self._solids.sort(key=lambda o: getattr(o, "layer", 0))
+        self.objects.sort(key=lambda o: getattr(o, "layer", 0))
+        self.solids.sort(key=lambda o: getattr(o, "layer", 0))
 
     # ========================
     # SCENE LOOP
     # ========================
-    def loop(self):
+    def set_loop(self):
         """ Funtion, send in decorator, will be called in main game loop """
 
         def decorator(func):
-            self._loop_function = func
+            self.loop_function = func
             return func
 
         return decorator
 
     def update(self):
         """Call update() on all scene objects."""
-        for obj in self._objects:
+        for obj in self.objects:
             try:
-                obj.update()
-                    
+                obj.update()  
             except Exception as e:
                 from .utils import log
-                log(e, "SceneManager | Update", True)
+                log(str(e), "SceneManager | Update", True)
