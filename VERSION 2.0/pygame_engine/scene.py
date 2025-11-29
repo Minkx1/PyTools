@@ -54,8 +54,7 @@ class Scene:
     def __init__(self):
         self.engine = get_engine()
         if self.engine == None:
-            log("Engine IS NOT initialized! Please initialize PyGameEngine before.", error=True)
-            raise PermissionError
+            raise PermissionError("Engine IS NOT initialized! Please initialize PyGameEngine before.")
 
         self.objects: List[object] = []
 

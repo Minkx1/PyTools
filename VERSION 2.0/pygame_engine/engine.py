@@ -106,7 +106,8 @@ class PyGameEngine:
                  screen_size: tuple[int, int] = (500, 500),
                  window_caption: str = "Game",
                  icon_path: str | None = None,
-                 fps: float = 60) -> None:
+                 fps: float = 60,
+                 debug: bool = True) -> None:
         
         pygame.init()
         PyGameEngine.engine = self
@@ -120,12 +121,15 @@ class PyGameEngine:
         
         self.running = True
         self.FPS = fps
+        self.debug = debug
 
         self.Time = _Time() 
         self.Input = _Input()
 
         self.scenes:list = []
         self.active_scene = None
+        self.logic_functions = {"main": None, "start": None, "end": None}
+        self.event_handlers = []
         
     def quit(self, exit_code:int = 0) -> int:
         log(f"Quitting...")
@@ -148,22 +152,51 @@ class PyGameEngine:
         self.active_scene = scene
         return 
 
+    def logic(self, mode: str = "start"):
+        """Decorator called, to init some logic. Mode in ['main', 'start', 'end']"""
+        def decorator(func):
+            def wrapper():
+                if mode not in self.logic_functions.keys():
+                    raise PermissionError("Error in registering Engine's logic 'Inapropriate logic mode'.")
+                else:
+                    self.logic_functions[mode] = func
+                return func
+            return wrapper
+        return decorator 
+
+
+    def handle_event(self, event=None):
+        if event:
+            for hndl in self.event_handlers:
+                if callable(hndl):
+                    hndl(event)
+        return
+            
+
     def run(self, first_scene = None) -> None:
-        self.globals = get_globals()
-        threading.Thread(target=self._console, daemon=True).start()
+        if self.debug:
+            self.globals = get_globals()
+            threading.Thread(target=self._console, daemon=True).start()
 
         self.active_scene = first_scene or self.scenes[0]
 
+        if callable(self.logic_functions["start"]):
+            self.logic_functions["start"]()
+
         while self.running:
             for event in pygame.event.get():
+                self.handle_event(event)
                 if event.type == pygame.QUIT:
                     self.quit(1)
             self.screen.fill("white")
             self.Input.update_input()
 
             try:
-                if self.active_scene != None: 
-                    self.active_scene.run()
+                if callable(self.logic_functions["main"]):
+                    self.logic_functions["main"]()
+                else:
+                    if self.active_scene != None: 
+                        self.active_scene.run()
             except Exception as e:
                 log(e, error=True)
             
@@ -171,5 +204,8 @@ class PyGameEngine:
             self.Time.time = pygame.time.get_ticks()
             self.Time.actual_fps = self.Time.Clock.get_fps()
             pygame.display.update()
+
+        if callable(self.logic_functions["end"]):
+            self.logic_functions["end"]()
 
         return
