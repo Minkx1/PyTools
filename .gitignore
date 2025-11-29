@@ -11,3 +11,4 @@ main.exe
 *.spec
 *.egg-info
 .env
+*.exe
