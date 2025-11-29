@@ -105,7 +105,7 @@ class PyGameEngine:
     def __init__(self, 
                  screen_size: tuple[int, int] = (500, 500),
                  window_caption: str = "Game",
-                 icon_path: str | None = None,
+                 icon: str | pygame.Surface | None = None,
                  fps: float = 60,
                  debug: bool = True) -> None:
         
@@ -115,7 +115,11 @@ class PyGameEngine:
         try:
             self.screen = pygame.display.set_mode(screen_size)
             self._window_caption = window_caption; pygame.display.set_caption(self._window_caption)
-            if icon_path: pygame.display.set_icon(pygame.image.load(icon_path).convert_alpha())
+            if icon: 
+                if isinstance(icon, str):
+                    pygame.display.set_icon(pygame.image.load(icon).convert_alpha())
+                if isinstance(icon, pygame.Surface):
+                    pygame.display.set_icon(icon)
         except Exception as e:
             log(e, error=True)
         
