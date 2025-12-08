@@ -12,13 +12,17 @@ icon_img = pygame.image.load(io.BytesIO(base64.b64decode(icon)))
 
 Engine = pge.PyGameEngine((SCREEN_W, SCREEN_H), "JASG!",icon=icon_img, debug=False)
 
-data = {"max_score": 0, "theme": "black"}
+data = {"max_score": 25, "theme": "black", "inv_theme": "white"}
 data_path = f"{pge.SavesManager.get_appdata()}/data"
 if pge.SavesManager.load(data_path): data = pge.SavesManager.load(data_path) 
 
 STARTED_GAME = True
 GAME_SPEED = 0.18
 
+def str_colr_to_rgb(color: str) -> tuple[int, int, int]:
+    c = pygame.Color(color)
+    return (int(c.r), int(c.g), int(c.b))
+data["theme"], data["inv_theme"] = str_colr_to_rgb(data["theme"]), str_colr_to_rgb(data["inv_theme"])
 
 class coord:
     __slots__ = ("x", "y")
@@ -73,6 +77,7 @@ class Snake(pge.Sprite):
         for i, part in enumerate(self.body):
             px, py = part.mult(BLOCK_SIZE).pos
             pygame.draw.rect(self.screen, "green", (px, py, BLOCK_SIZE, BLOCK_SIZE))
+            pygame.draw.rect(self.screen, "black", (px, py, BLOCK_SIZE, BLOCK_SIZE), 1)
 
             if i == 0:
                 for ex, ey in self.eye_map[self.speed.pos]:
@@ -140,9 +145,29 @@ with MAIN.content:
 
 @MAIN.define
 def main():
-    Engine.screen.fill(data["theme"])
+    # Engine.screen.fill(data["theme"])
+    for i in range(COLS):
+        for j in range(ROWS):
+            pygame.draw.rect(Engine.screen, ((abs(data["inv_theme"][0]+50-255), abs(data["inv_theme"][1]+50-255), abs(data["inv_theme"][2]+50-255)) if (i+j)%2!=0 else data["theme"]), (BLOCK_SIZE*i, BLOCK_SIZE*j, BLOCK_SIZE, BLOCK_SIZE))
+            # pygame.draw.rect(Engine.screen, ((abs(50), abs(50), abs(50)) if (i+j)%2!=0 else data["theme"]), (BLOCK_SIZE*i, BLOCK_SIZE*j, BLOCK_SIZE, BLOCK_SIZE))
+
     MAIN.update_all()
-    pge.render_text(f"{snake.score} : {data['max_score']}", SCREEN_W/2, 29, size=25, center=True, color= ("black" if data["theme"] == "white" else "white"))
+    pge.render_text(f"{snake.score} : {data['max_score']}", SCREEN_W/2, 29, size=25, center=True, color=data["inv_theme"])
+    if Engine.Input.key_pressed(pygame.K_ESCAPE, pygame.K_SPACE):
+        Engine.set_active_scene(PAUSE)
+
+
+PAUSE = pge.Scene()
+with PAUSE.content:
+    s = pygame.Surface((1000,750), pygame.SRCALPHA)
+    s.fill((0,0,0,128))  
+
+@PAUSE.define
+def pause():
+    Engine.screen.blit(s, (0,0)) 
+    pge.utils.render_text("g a m e   p a u s e d", SCREEN_W/2, SCREEN_H/2, "ComicSans", 42, data["inv_theme"], True)
+    if Engine.Input.key_pressed(pygame.K_ESCAPE, pygame.K_KP_ENTER, pygame.K_SPACE):
+        Engine.set_active_scene(MAIN) 
 
 MENU = pge.Scene()
 @MENU.define
@@ -151,8 +176,8 @@ def menu():
     Engine.screen.fill(data["theme"])
 
     if STARTED_GAME:
-        pge.render_text("J A S G !", SCREEN_W/2, SCREEN_H/2-50, size=64, center=True, color= ("black" if data["theme"] == "white" else "white"), font="ComicSans")
-        pge.render_text(f"MAX SCORE: {data['max_score']}", SCREEN_W/2, SCREEN_H/2+50, size=32, center=True, color= ("black" if data["theme"] == "white" else "white"), font="ComicSans")
+        pge.render_text("J A S G !", SCREEN_W/2, SCREEN_H/2-50, size=64, center=True, color=data["inv_theme"], font="ComicSans")
+        pge.render_text(f"MAX SCORE: {data['max_score']}", SCREEN_W/2, SCREEN_H/2+50, size=32, center=True, color=data["inv_theme"], font="ComicSans")
         if Engine.Input.key_pressed(pygame.K_SPACE) or Engine.Input.mouse_pressed():
             snake = Snake()
             MAIN.objects = [snake]

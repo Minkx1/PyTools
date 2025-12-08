@@ -83,13 +83,13 @@ class _Input:
         self._keys = pygame.key.get_pressed()
         self._mouse = pygame.mouse.get_pressed(num_buttons=5)
 
-    def key_hold(self, key) -> bool:
+    def key_hold(self, *keys) -> bool:
         """Returns True as long as key is held."""
-        return self._keys[key]
+        return any(self._keys[k] for k in keys)
 
-    def key_pressed(self, key) -> bool:
+    def key_pressed(self, *keys) -> bool:
         """Returns True only on the frame the key was pressed."""
-        return self._keys[key] and not self._prev_keys[key]
+        return any(self._keys[k] and not self._prev_keys[k] for k in keys)
 
     def mouse_pressed(self, mouse_button: int = 0) -> bool:
         """mouse_button: 0=LMB, 1=RMB, 2=MMB"""
